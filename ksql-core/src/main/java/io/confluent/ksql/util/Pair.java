@@ -16,6 +16,8 @@
 
 package io.confluent.ksql.util;
 
+import java.util.Objects;
+
 public class Pair<T1, T2> {
 
   public final T1 left;
@@ -32,5 +34,10 @@ public class Pair<T1, T2> {
 
   public T2 getRight() {
     return right;
+  }
+
+  @Override
+  public String toString() {
+    return Objects.toString(left) + "," + Objects.toString(right);
   }
 }
