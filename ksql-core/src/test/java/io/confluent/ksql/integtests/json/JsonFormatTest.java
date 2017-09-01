@@ -171,44 +171,29 @@ public class JsonFormatTest {
         .removeImplicitRowTimeRowKeyFromSchema(metaStore.getSource(streamName).getSchema());
 
     Map<String, GenericRow> expectedResults = new HashMap<>();
-    expectedResults.put("1", new GenericRow(Arrays.asList("ITEM_1", 10.0, new
-        Double[]{100.0,
-        110.99,
-        90.0 })));
-    expectedResults.put("2", new GenericRow(Arrays.asList("ITEM_2", 20.0, new
-        Double[]{10.0,
-        10.99,
-        9.0 })));
+    expectedResults.put("1",
+      new GenericRow(Arrays.asList("ITEM_1", 10.0, new Double[]{100.0, 110.99, 90.0 })));
 
-    expectedResults.put("3", new GenericRow(Arrays.asList("ITEM_3", 30.0, new
-        Double[]{10.0,
-        10.99,
-        91.0 })));
+    expectedResults.put("2",
+      new GenericRow(Arrays.asList("ITEM_2", 20.0, new Double[]{10.0, 10.99,9.0 })));
 
-    expectedResults.put("4", new GenericRow(Arrays.asList("ITEM_4", 40.0, new
-        Double[]{10.0,
-        140.99,
-        94.0 })));
+    expectedResults.put("3",
+      new GenericRow(Arrays.asList("ITEM_3", 30.0, new Double[]{10.0, 10.99, 91.0 })));
 
-    expectedResults.put("5", new GenericRow(Arrays.asList("ITEM_5", 50.0, new
-        Double[]{160.0,
-        160.99,
-        98.0 })));
+    expectedResults.put("4",
+      new GenericRow(Arrays.asList("ITEM_4", 40.0, new Double[]{10.0, 140.99, 94.0 })));
 
-    expectedResults.put("6", new GenericRow(Arrays.asList("ITEM_6", 60.0, new
-        Double[]{1000.0,
-        1100.99,
-        900.0 })));
+    expectedResults.put("5",
+      new GenericRow(Arrays.asList("ITEM_5", 50.0, new Double[]{160.0, 160.99, 98.0 })));
 
-    expectedResults.put("7", new GenericRow(Arrays.asList("ITEM_7", 70.0, new
-        Double[]{1100.0,
-        1110.99,
-        190.0 })));
+    expectedResults.put("6",
+      new GenericRow(Arrays.asList("ITEM_6", 60.0, new Double[]{1000.0, 1100.99, 900.0 })));
 
-    expectedResults.put("8", new GenericRow(Arrays.asList("ITEM_8", 80.0, new
-        Double[]{1100.0,
-        1110.99,
-        970.0 })));
+    expectedResults.put("7",
+      new GenericRow(Arrays.asList("ITEM_7", 70.0, new Double[]{1100.0, 1110.99, 190.0 })));
+
+    expectedResults.put("8",
+      new GenericRow(Arrays.asList("ITEM_8", 80.0, new Double[]{1100.0, 1110.99, 970.0 })));
 
     Map<String, GenericRow> results = readNormalResults(streamName, resultSchema, expectedResults.size());
 
@@ -234,8 +219,7 @@ public class JsonFormatTest {
         .removeImplicitRowTimeRowKeyFromSchema(metaStore.getSource(streamName).getSchema());
 
     Map<String, GenericRow> expectedResults = new HashMap<>();
-    expectedResults.put("8", new GenericRow(Arrays.asList("8", inputRecordsMetadata.get("8")
-        .timestamp(), "ITEM_8")));
+    expectedResults.put("8", new GenericRow(Arrays.asList("8", inputRecordsMetadata.get("8").timestamp(), "ITEM_8")));
 
     Map<String, GenericRow> results = readNormalResults(streamName, resultSchema, expectedResults.size());
 
@@ -271,10 +255,15 @@ public class JsonFormatTest {
         .removeImplicitRowTimeRowKeyFromSchema(metaStore.getSource(stream2Name).getSchema());
 
     Map<String, GenericRow> expectedResults = new HashMap<>();
-    expectedResults.put("8", new GenericRow(Arrays.asList("8", inputRecordsMetadata.get("8")
-            .timestamp() + 10000, "8", inputRecordsMetadata.get("8").timestamp() + 10000,
-        inputRecordsMetadata.get("8").timestamp
-            () + 100, "ORDER_6", "ITEM_8")));
+    expectedResults.put("8",
+      new GenericRow(Arrays.asList(
+        "8",
+        inputRecordsMetadata.get("8").timestamp() + 10000,
+        "8",
+        inputRecordsMetadata.get("8").timestamp() + 10000,
+        inputRecordsMetadata.get("8").timestamp() + 100,
+        "ORDER_6",
+        "ITEM_8")));
 
     Map<String, GenericRow> results1 = readNormalResults(stream1Name, resultSchema,
         expectedResults.size());
@@ -310,12 +299,8 @@ public class JsonFormatTest {
     mapField.put("key1", 1.0);
     mapField.put("key2", 2.0);
     mapField.put("key3", 3.0);
-    expectedResults.put("8", new GenericRow(Arrays.asList(8, "ORDER_6",
-        "ITEM_8", 80.0, new
-            Double[]{1100.0,
-            1110.99,
-            970.0 },
-        mapField)));
+    expectedResults.put("8",
+      new GenericRow(Arrays.asList(8, "ORDER_6", "ITEM_8", 80.0, new Double[]{1100.0, 1110.99, 970.0 }, mapField)));
 
     Map<String, GenericRow> results = readNormalResults(streamName, resultSchema, expectedResults.size());
 
@@ -492,9 +477,7 @@ public class JsonFormatTest {
         .removeImplicitRowTimeRowKeyFromSchema(metaStore.getSource(streamName).getSchema());
 
     Map<String, GenericRow> expectedResults = new HashMap<>();
-    expectedResults.put("8", new GenericRow(Arrays.asList(1500962514814l,
-        "2017-07-24 23:01:54.814",
-        1500962514814l)));
+    expectedResults.put("8", new GenericRow(Arrays.asList(1500962514814l, "2017-07-24 23:01:54.814", 1500962514814l)));
 
     Map<String, GenericRow> results = readNormalResults(streamName, resultSchema, expectedResults.size());
 
@@ -517,8 +500,7 @@ public class JsonFormatTest {
     final String havingClause = "SUM(ORDERUNITS) > 150";
 
     final String queryString = String.format(
-        "CREATE TABLE %s AS SELECT %s FROM %s WINDOW %s WHERE ORDERUNITS > 60 GROUP BY ITEMID "
-            + "HAVING %s;",
+        "CREATE TABLE %s AS SELECT %s FROM %s WINDOW %s WHERE ORDERUNITS > 60 GROUP BY ITEMID HAVING %s;",
         streamName,
         selectColumns,
         inputStream,
