@@ -44,7 +44,7 @@ statement
     | DESCRIBE (qualifiedName | TOPIC qualifiedName)                        #showColumns
     | PRINT qualifiedName (FROM BEGINNING)? ((INTERVAL | SAMPLE) number)?   #printTopic
     | (LIST | SHOW) QUERIES                                                 #listQueries
-    | TERMINATE QUERY? INTEGER_VALUE                                               #terminateQuery
+    | TERMINATE QUERY? INTEGER_VALUE                                        #terminateQuery
     | SET STRING EQ STRING                                                  #setProperty
     | UNSET STRING                                                          #unsetProperty
     | LOAD expression                                                       #loadProperties
@@ -90,8 +90,8 @@ tableProperty
     : identifier EQ expression
     ;
 
-queryNoWith:
-      queryTerm
+queryNoWith
+    : queryTerm
       (ORDER BY sortItem (',' sortItem)*)?
       (LIMIT limit=(INTEGER_VALUE | ALL))?
       (APPROXIMATE AT confidence=number CONFIDENCE)?
@@ -228,8 +228,7 @@ columnAliases
     ;
 
 relationPrimary
-    :
-    qualifiedName (WITH tableProperties)?                             #tableName
+    : qualifiedName (WITH tableProperties)?                           #tableName
     | '(' query ')'                                                   #subqueryRelation
     | UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest
     | '(' relation ')'                                                #parenthesizedRelation
