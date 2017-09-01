@@ -24,11 +24,12 @@ import io.confluent.ksql.parser.tree.Expression;
 import io.confluent.ksql.parser.tree.ExpressionTreeRewriter;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.util.KsqlTestUtil;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class AggregateAnalyzerTest {
 
@@ -81,149 +82,169 @@ public class AggregateAnalyzerTest {
 
   @Test
   public void testSimpleAggregateQueryAnalysis() throws Exception {
-    String queryStr = "SELECT col1, count(col1) FROM test1 WHERE col0 > 100 group by col1;";
+    String queryStr = "SELECT col1, count(col1) FROM test1 WHERE col0 > 100 GROUP BY col1;";
     AggregateAnalysis aggregateAnalysis = analyzeAggregates(queryStr);
-    Assert.assertNotNull(aggregateAnalysis);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().size() == 1);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(0).getName().getSuffix()
-                          .equalsIgnoreCase("count"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().size() == 1);
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsMap().size() == 1);
-    Assert.assertTrue(aggregateAnalysis.getFinalSelectExpressions().size() == 2);
 
+    assertThat(aggregateAnalysis).isNotNull();
+    assertThat(aggregateAnalysis.getFunctionList())
+      .extracting(Object::toString)
+      .containsExactly("COUNT(TEST1.COL1)");
+    assertThat(aggregateAnalysis.getAggregateFunctionArguments())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1");
+    assertThat(aggregateAnalysis.getRequiredColumnsList())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1");
+    assertThat(aggregateAnalysis.getFinalSelectExpressions())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "KSQL_AGG_VARIABLE_0");
+    assertThat(aggregateAnalysis.getHavingExpression())
+      .isNull();
   }
 
   @Test
   public void testMultipleAggregateQueryAnalysis() throws Exception {
-    String queryStr = "SELECT col1, sum(col3), count(col1) FROM test1 WHERE col0 > 100 group by "
-                      + "col1;";
+    String queryStr = "SELECT col1, sum(col3), count(col1) FROM test1 WHERE col0 > 100 GROUP BY col1;";
     AggregateAnalysis aggregateAnalysis = analyzeAggregates(queryStr);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().size() == 2);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(0).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(1).getName().getSuffix()
-                          .equalsIgnoreCase("count"));
-    Assert.assertTrue(aggregateAnalysis.getNonAggResultColumns().size() == 1);
-    Assert.assertTrue(aggregateAnalysis.getNonAggResultColumns().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(0).toString()
-                          .equalsIgnoreCase("test1.col3"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(1).toString()
-                          .equalsIgnoreCase("test1.col1"));
-    Assert.assertTrue(aggregateAnalysis.getFinalSelectExpressions().size() == 3);
-    Assert.assertTrue(aggregateAnalysis.getFinalSelectExpressions().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().size() == 2);
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().get(1).toString()
-                          .equalsIgnoreCase("test1.col3"));
+    assertThat(aggregateAnalysis.getFunctionList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "SUM(TEST1.COL3)",
+        "COUNT(TEST1.COL1)");
+    assertThat(aggregateAnalysis.getNonAggResultColumns())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1");
+    assertThat(aggregateAnalysis.getAggregateFunctionArguments())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL3",
+        "TEST1.COL1");
+    assertThat(aggregateAnalysis.getFinalSelectExpressions())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "KSQL_AGG_VARIABLE_0",
+        "KSQL_AGG_VARIABLE_1");
+    assertThat(aggregateAnalysis.getRequiredColumnsList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "TEST1.COL3");
+    assertThat(aggregateAnalysis.getHavingExpression())
+      .isNull();
   }
 
   @Test
   public void testExpressionArgAggregateQueryAnalysis() {
     String queryStr = "SELECT col1, sum(col3*col0), sum(floor(col3)*3.0) FROM test1 window w "
-                      + "TUMBLING ( size 2 second) WHERE col0 > "
-                      + "100 "
-                      + "group "
-                      + "by "
-                      + "col1;";
+                      + "TUMBLING ( size 2 second) WHERE col0 > 100 "
+                      + "GROUP BY col1;";
     AggregateAnalysis aggregateAnalysis = analyzeAggregates(queryStr);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().size() == 2);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(0).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(1).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().size() == 2);
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(0).toString()
-                          .equalsIgnoreCase("(TEST1.COL3 * TEST1.COL0)"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(1).toString()
-                          .equalsIgnoreCase("(FLOOR(TEST1.COL3) * 3.0)"));
-    Assert.assertTrue(aggregateAnalysis.getNonAggResultColumns().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-
-    Assert.assertTrue(aggregateAnalysis.getFinalSelectExpressions().size() == 3);
-
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().size() == 3);
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().get(1).toString()
-                          .equalsIgnoreCase("test1.col3"));
+    assertThat(aggregateAnalysis.getFunctionList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "SUM((TEST1.COL3 * TEST1.COL0))",
+        "SUM((FLOOR(TEST1.COL3) * 3.0))");
+    assertThat(aggregateAnalysis.getAggregateFunctionArguments())
+      .extracting(Object::toString)
+      .containsExactly(
+        "(TEST1.COL3 * TEST1.COL0)",
+        "(FLOOR(TEST1.COL3) * 3.0)");
+    assertThat(aggregateAnalysis.getNonAggResultColumns())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1");
+    assertThat(aggregateAnalysis.getFinalSelectExpressions())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "KSQL_AGG_VARIABLE_0",
+        "KSQL_AGG_VARIABLE_1");
+    assertThat(aggregateAnalysis.getRequiredColumnsList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "TEST1.COL3",
+        "TEST1.COL0");
+    assertThat(aggregateAnalysis.getHavingExpression())
+      .isNull();
   }
 
   @Test
   public void testAggregateWithExpressionQueryAnalysis() {
     String queryStr = "SELECT col1, sum(col3*col0)/count(col1), sum(floor(col3)*3.0) FROM test1 "
                       + "window w "
-                      + "TUMBLING ( size 2 second) WHERE col0 > "
-                      + "100 "
-                      + "group "
-                      + "by "
-                      + "col1;";
+                      + "TUMBLING ( size 2 second) WHERE col0 > 100 "
+                      + "GROUP BY col1;";
     AggregateAnalysis aggregateAnalysis = analyzeAggregates(queryStr);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().size() == 3);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(0).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(1).getName().getSuffix()
-                          .equalsIgnoreCase("count"));
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(2).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().size() == 3);
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(0).toString()
-                          .equalsIgnoreCase("(TEST1.COL3 * TEST1.COL0)"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(1).toString()
-                          .equalsIgnoreCase("TEST1.COL1"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(2).toString()
-                          .equalsIgnoreCase("(FLOOR(TEST1.COL3) * 3.0)"));
-    Assert.assertTrue(aggregateAnalysis.getNonAggResultColumns().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-
-    Assert.assertTrue(aggregateAnalysis.getFinalSelectExpressions().size() == 3);
-
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().size() == 3);
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().get(1).toString()
-                          .equalsIgnoreCase("test1.col3"));
+    assertThat(aggregateAnalysis.getFunctionList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "SUM((TEST1.COL3 * TEST1.COL0))",
+        "COUNT(TEST1.COL1)",
+        "SUM((FLOOR(TEST1.COL3) * 3.0))");
+    assertThat(aggregateAnalysis.getAggregateFunctionArguments())
+      .extracting(Object::toString)
+      .containsExactly(
+        "(TEST1.COL3 * TEST1.COL0)",
+        "TEST1.COL1",
+        "(FLOOR(TEST1.COL3) * 3.0)");
+    assertThat(aggregateAnalysis.getNonAggResultColumns())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1");
+    assertThat(aggregateAnalysis.getFinalSelectExpressions())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "(KSQL_AGG_VARIABLE_0 / KSQL_AGG_VARIABLE_1)",
+        "KSQL_AGG_VARIABLE_2");
+    assertThat(aggregateAnalysis.getRequiredColumnsList())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1", "TEST1.COL3", "TEST1.COL0");
+    assertThat(aggregateAnalysis.getHavingExpression())
+      .isNull();
   }
 
   @Test
   public void testAggregateWithExpressionHavingQueryAnalysis() {
     String queryStr = "SELECT col1, sum(col3*col0)/count(col1), sum(floor(col3)*3.0) FROM test1 "
                       + "window w "
-                      + "TUMBLING ( size 2 second) WHERE col0 > "
-                      + "100 "
-                      + "group "
-                      + "by "
-                      + "col1 "
-                      + "having count(col1) > 10;";
+                      + "TUMBLING ( size 2 second) WHERE col0 > 100 "
+                      + "GROUP BY col1 "
+                      + "HAVING count(col1) > 10;";
     AggregateAnalysis aggregateAnalysis = analyzeAggregates(queryStr);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().size() == 4);
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(0).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(1).getName().getSuffix()
-                          .equalsIgnoreCase("count"));
-    Assert.assertTrue(aggregateAnalysis.getFunctionList().get(2).getName().getSuffix()
-                          .equalsIgnoreCase("sum"));
-
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().size() == 4);
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(0).toString()
-                          .equalsIgnoreCase("(TEST1.COL3 * TEST1.COL0)"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(1).toString()
-                          .equalsIgnoreCase("TEST1.COL1"));
-    Assert.assertTrue(aggregateAnalysis.getAggregateFunctionArguments().get(2).toString()
-                          .equalsIgnoreCase("(FLOOR(TEST1.COL3) * 3.0)"));
-    Assert.assertTrue(aggregateAnalysis.getNonAggResultColumns().get(0).toString()
-                          .equalsIgnoreCase("test1.col1"));
-
-    Assert.assertTrue(aggregateAnalysis.getFinalSelectExpressions().size() == 3);
-
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().size() == 3);
-    Assert.assertTrue(aggregateAnalysis.getRequiredColumnsList().get(1).toString()
-                          .equalsIgnoreCase("test1.col3"));
-    Assert.assertTrue(aggregateAnalysis.getHavingExpression() instanceof ComparisonExpression);
-    Assert.assertTrue(aggregateAnalysis.getHavingExpression().toString().equalsIgnoreCase(""
-                                                                                          + ""
-                                                                                          + "(KSQL_AGG_VARIABLE_3 > 10)"));
-
+    assertThat(aggregateAnalysis.getFunctionList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "SUM((TEST1.COL3 * TEST1.COL0))",
+        "COUNT(TEST1.COL1)",
+        "SUM((FLOOR(TEST1.COL3) * 3.0))",
+        "COUNT(TEST1.COL1)");
+   assertThat(aggregateAnalysis.getAggregateFunctionArguments())
+      .extracting(Object::toString)
+      .containsExactly(
+        "(TEST1.COL3 * TEST1.COL0)",
+        "TEST1.COL1",
+        "(FLOOR(TEST1.COL3) * 3.0)",
+        "TEST1.COL1");
+   assertThat(aggregateAnalysis.getNonAggResultColumns())
+      .extracting(Object::toString)
+      .containsExactly("TEST1.COL1");
+   assertThat(aggregateAnalysis.getFinalSelectExpressions())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "(KSQL_AGG_VARIABLE_0 / KSQL_AGG_VARIABLE_1)",
+        "KSQL_AGG_VARIABLE_2");
+   assertThat(aggregateAnalysis.getRequiredColumnsList())
+      .extracting(Object::toString)
+      .containsExactly(
+        "TEST1.COL1",
+        "TEST1.COL3",
+        "TEST1.COL0");
+    assertThat(aggregateAnalysis.getHavingExpression())
+      .isInstanceOf(ComparisonExpression.class)
+      .extracting(Object::toString).containsExactly("(KSQL_AGG_VARIABLE_3 > 10)");
   }
 }
